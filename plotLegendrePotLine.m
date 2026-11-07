@@ -14,12 +14,13 @@ z = R * cos(theta);
 cos_theta = cos(theta);
 
 Phi = zeros(size(theta));
+Phi_o = zeros(size(theta));
 
 % Inside-series contribution evaluated on r = R
 for k = 1:numel(l_in)
     l = l_in(k);
     Pl = legendre(l, cos_theta);
-    Pl0 = squeeze(Pl(1,:,:));
+    Pl0 = Pl(1,:);
 
     a = 0;
     b = 0;
@@ -28,23 +29,41 @@ for k = 1:numel(l_in)
 
     Phi = Phi + (a * R^l + b * R^(-l-1)) .* Pl0;
 end
-
-% Outside-series contribution evaluated on r = R
+% Outside-series contribution evaluated on r = R should be equal
 for k = 1:numel(l_out)
     l = l_out(k);
     Pl = legendre(l, cos_theta);
-    Pl0 = squeeze(Pl(1,:,:));
+    Pl0 = Pl(1,:);
 
     a = 0;
     b = 0;
     if ~isempty(A_out), a = A_out(k); end
     if ~isempty(B_out), b = B_out(k); end
 
-    Phi = Phi + (a * R^l + b * R^(-l-1)) .* Pl0;
+    Phi_o = Phi_o + (a * R^l + b * R^(-l-1)) .* Pl0;
+end
+
+
+% Compare the two vectors within a tolerance
+tol = 1e-9;
+
+if ~isequal(size(Phi), size(Phi_o))
+    warning('plotLegendrePotLine:PhiSizeMismatch', ...
+        'Phi and Phi_o have different sizes: %s vs %s.', ...
+        mat2str(size(Phi)), mat2str(size(Phi_o)));
+else
+    diffPhi = abs(Phi - Phi_o);
+    maxDiff = max(diffPhi);
+
+    if maxDiff > tol
+        warning('plotLegendrePotLine:PhiMismatch', ...
+            'Phi and Phi_o differ by up to %g, exceeding tolerance %g.', ...
+            maxDiff, tol);
+    end
 end
 
 % Plot only the circle
-%figure
+% figure
 scatter(x, z, 20, Phi, 'filled')
 hold on
 plot(x, z, 'k-', 'LineWidth', 1)
